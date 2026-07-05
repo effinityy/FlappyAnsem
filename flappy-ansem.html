@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Flappy $ANSEM 🐂</title>
+<style>
+  /* ===================== BASE / LAYOUT ===================== */
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #05050a;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    overflow: hidden;
+    user-select: none;
+  }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh;
+    background: radial-gradient(ellipse at center, #0b0b1a 0%, #05050a 70%);
+  }
+  #gameWrap {
+    position: relative;
+    width: 360px;
+    height: 640px;
+    max-width: 100vw;
+    max-height: 100vh;
+    box-shadow: 0 0 40px rgba(255, 215, 0, 0.15), 0 0 100px rgba(0,0,0,0.8);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid #2a2210;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: #05050a;
+    touch-action: none;
+  }
+
+  /* ===================== OVERLAY PANELS ===================== */
+  .overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding: 22px 18px;
+    background: linear-gradient(180deg, rgba(5,5,10,0.92) 0%, rgba(10,8,20,0.96) 100%);
+    color: #f5f5f5;
+    overflow-y: auto;
+    z-index: 10;
+  }
+  .hidden { display: none !important; }
+
+  .title-main {
+    font-size: 26px;
+    font-weight: 900;
+    color: #39ff14;
+    text-shadow: 0 0 12px rgba(57,255,20,0.6), 0 0 2px #000;
+    margin: 6px 0 2px;
+    text-align: center;
+    letter-spacing: 0.5px;
+  }
+  .subtitle {
+    font-size: 12px;
+    color: #b5b5c0;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+
+  .bull-emoji {
+    font-size: 40px;
+    filter: drop-shadow(0 0 10px rgba(57,255,20,0.5));
+  }
+
+  label.field-label {
+    font-size: 11.5px;
+    color: #d8d0a0;
+    margin-bottom: 6px;
+    text-align: center;
+  }
+
+  #usernameInput {
+    width: 100%;
+    max-width: 260px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1.5px solid #39ff14;
+    background: #12101a;
+    color: #fff;
+    font-size: 14px;
+    text-align: center;
+    outline: none;
+    margin-bottom: 12px;
+  }
+  #usernameInput:focus {
+    box-shadow: 0 0 8px rgba(57,255,20,0.5);
+  }
+
+  .btn {
+    background: linear-gradient(180deg, #7dff5c, #39ff14 60%, #1f9e0f);
+    color: #1a1400;
+    border: none;
+    padding: 12px 22px;
+    border-radius: 10px;
+    font-weight: 800;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 3px 0 #0d5c08, 0 0 14px rgba(57,255,20,0.35);
+    margin-bottom: 10px;
+    transition: transform 0.06s ease;
+    width: 100%;
+    max-width: 260px;
+  }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #0d5c08; }
+
+  .btn.secondary {
+    background: linear-gradient(180deg, #2c2c38, #1a1a22 60%, #0f0f14);
+    color: #39ff14;
+    border: 1px solid #444;
+    box-shadow: 0 3px 0 #000;
+  }
+  .btn.tweet {
+    background: linear-gradient(180deg, #1da1f2, #0d8fdd 60%, #0a70b0);
+    color: #fff;
+    box-shadow: 0 3px 0 #054a75;
+  }
+
+  .instructions {
+    font-size: 11px;
+    color: #9a9aa8;
+    text-align: center;
+    margin: 4px 0 12px;
+    line-height: 1.5;
+  }
+  .instructions b { color: #39ff14; }
+
+  /* ===================== LEADERBOARD ===================== */
+  .leaderboard {
+    width: 100%;
+    max-width: 280px;
+    background: rgba(20, 15, 5, 0.55);
+    border: 1px solid rgba(57,255,20,0.35);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-top: 6px;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .leaderboard h3 {
+    margin: 0 0 8px;
+    font-size: 13px;
+    color: #39ff14;
+    text-align: center;
+    letter-spacing: 0.3px;
+  }
+  .lb-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12.5px;
+    padding: 4px 6px;
+    border-radius: 5px;
+    margin-bottom: 2px;
+  }
+  .lb-row:nth-child(odd) { background: rgba(255,255,255,0.03); }
+  .lb-rank { color: #39ff14; font-weight: 700; width: 22px; }
+  .lb-name { flex: 1; color: #eee; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 6px;}
+  .lb-score { color: #ff9c3b; font-weight: 700; }
+  .lb-empty { text-align: center; color: #777; font-size: 12px; padding: 8px 0; }
+
+  /* ===================== GAME OVER SPECIFIC ===================== */
+  .go-score {
+    font-size: 42px;
+    font-weight: 900;
+    color: #39ff14;
+    text-shadow: 0 0 14px rgba(57,255,20,0.6);
+    margin: 4px 0 0;
+  }
+  .go-label { font-size: 11px; color: #b5b5c0; letter-spacing: 2px; }
+  .death-msg {
+    font-size: 13px;
+    color: #ff6b6b;
+    font-style: italic;
+    margin: 6px 0 12px;
+    text-align: center;
+    min-height: 18px;
+  }
+  .new-best {
+    font-size: 12px;
+    color: #00e0a0;
+    font-weight: 700;
+    margin-bottom: 6px;
+    text-shadow: 0 0 8px rgba(0,224,160,0.5);
+  }
+
+  /* HUD during play */
+  #hud {
+    position: absolute;
+    top: 14px; left: 0; width: 100%;
+    text-align: center;
+    z-index: 5;
+    pointer-events: none;
+  }
+  #hudScore {
+    font-size: 40px;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 0 10px rgba(57,255,20,0.8), 2px 2px 0 #000;
+  }
+  #hudLabel {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: #39ff14;
+    text-shadow: 1px 1px 0 #000;
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div id="gameWrap">
+  <canvas id="gameCanvas" width="360" height="640"></canvas>
+
+  <!-- HUD (score while playing) -->
+  <div id="hud" class="hidden">
+    <div id="hudLabel">$ANSEM SECURED</div>
+    <div id="hudScore">0</div>
+  </div>
+
+  <!-- START SCREEN -->
+  <div id="startScreen" class="overlay">
+    <div class="bull-emoji">🐂</div>
+    <div class="title-main">Flappy $ANSEM</div>
+    <div class="subtitle">The Black Bull never sleeps. Stack $ANSEM, dodge bears.</div>
+
+    <label class="field-label" for="usernameInput">Enter your username for the leaderboard (any name you want)</label>
+    <input id="usernameInput" type="text" placeholder="Anon" maxlength="14">
+
+    <button class="btn" id="playBtn">Play as Anon</button>
+
+    <div class="instructions">
+      Tap / Click / <b>Spacebar</b> to flap.<br>
+      Dodge the <b>Bear Market Pipes</b>. Every pipe cleared = 1 $ANSEM.
+    </div>
+
+    <div class="leaderboard" id="startLeaderboard">
+      <h3>🏆 Top Bulls • $ANSEM Leaderboard</h3>
+      <div id="startLbList"></div>
+    </div>
+  </div>
+
+  <!-- GAME OVER SCREEN -->
+  <div id="gameOverScreen" class="overlay hidden">
+    <div class="go-label">RUN OVER</div>
+    <div class="go-score" id="finalScore">0</div>
+    <div class="go-label">$ANSEM SECURED</div>
+    <div class="new-best hidden" id="newBestMsg">🔥 NEW PERSONAL BEST 🔥</div>
+    <div class="death-msg" id="deathMsg">Paper hands detected.</div>
+
+    <button class="btn" id="restartBtn">Fly Again</button>
+    <button class="btn tweet" id="tweetBtn">📣 Screenshot & Bullpost on X</button>
+
+    <div class="leaderboard" id="endLeaderboard">
+      <h3>🏆 Top Bulls • $ANSEM Leaderboard</h3>
+      <div id="endLbList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* =========================================================
+     CONFIG & CONSTANTS
+  ========================================================= */
+  const CANVAS_W = 360;
+  const CANVAS_H = 640;
+  const GROUND_H = 90;
+
+  const GRAVITY = 1500;          // px/s^2
+  const FLAP_VELOCITY = -420;    // px/s (instant upward velocity on flap)
+  const MAX_FALL_SPEED = 620;
+  const PIPE_GAP = 165;
+  const PIPE_WIDTH = 62;
+  const PIPE_SPACING = 210;      // horizontal distance between pipe pairs
+  const SCROLL_SPEED = 165;      // px/s
+  const BULL_X = 100;            // fixed horizontal position of the bull
+  const BULL_RADIUS = 18;        // collision radius (approx)
+
+  const LB_KEY = "flappyAnsemLeaderboard";
+  const LB_MAX = 10;
+
+  const DEATH_MESSAGES = [
+    "Paper hands detected.",
+    "Bears got you but bulls rise again.",
+    "Protect the bag next time.",
+    "Ansem is watching — try again.",
+    "Jeet detected.",
+    "Sold the bottom. Classic.",
+    "The bear market got one more victim.",
+    "Diamond hands required. Try again, Anon.",
+    "You got rugged by gravity.",
+    "Not financial advice: flap harder."
+  ];
+
+  /* =========================================================
+     DOM REFERENCES
+  ========================================================= */
+  const canvas = document.getElementById("gameCanvas");
+  const ctx = canvas.getContext("2d");
+
+  const startScreen = document.getElementById("startScreen");
+  const gameOverScreen = document.getElementById("gameOverScreen");
+  const hud = document.getElementById("hud");
+  const hudScore = document.getElementById("hudScore");
+
+  const usernameInput = document.getElementById("usernameInput");
+  const playBtn = document.getElementById("playBtn");
+  const restartBtn = document.getElementById("restartBtn");
+  const tweetBtn = document.getElementById("tweetBtn");
+
+  const finalScoreEl = document.getElementById("finalScore");
+  const deathMsgEl = document.getElementById("deathMsg");
+  const newBestMsgEl = document.getElementById("newBestMsg");
+
+  const startLbList = document.getElementById("startLbList");
+  const endLbList = document.getElementById("endLbList");
+
+  /* =========================================================
+     GAME STATE
+  ========================================================= */
+  let state = "start"; // "start" | "playing" | "gameover"
+  let username = "Anon";
+  let score = 0;
+  let lastTime = 0;
+  let animFrameId = null;
+
+  let bull = {
+    y: CANVAS_H / 2,
+    vy: 0,
+    rotation: 0,
+    wingPhase: 0,
+    legKick: 0 // 1 = legs tucked up tight (just flapped), 0 = legs extended/galloping
+  };
+
+  let pipes = []; // {x, gapY, passed}
+  let groundOffset = 0;
+  let bgStars = [];
+  let bgLines = [];
+
+  /* =========================================================
+     AUDIO (simple Web Audio API beeps)
+  ========================================================= */
+  let audioCtx = null;
+  function getAudioCtx() {
+    if (!audioCtx) {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      } catch (e) { /* audio unsupported */ }
+    }
+    return audioCtx;
+  }
+  function beep(freq, duration, type, gainVal) {
+    const ac = getAudioCtx();
+    if (!ac) return;
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.type = type || "square";
+    osc.frequency.value = freq;
+    gain.gain.value = gainVal || 0.06;
+    osc.connect(gain);
+    gain.connect(ac.destination);
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + duration);
+    osc.stop(ac.currentTime + duration);
+  }
+  function sfxFlap() { beep(520, 0.09, "square", 0.05); }
+  function sfxScore() { beep(880, 0.12, "sine", 0.07); }
+  function sfxDeath() { beep(140, 0.35, "sawtooth", 0.08); }
+
+  /* =========================================================
+     LEADERBOARD (localStorage)
+  ========================================================= */
+  function loadLeaderboard() {
+    try {
+      const raw = localStorage.getItem(LB_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveLeaderboard(list) {
+    try {
+      localStorage.setItem(LB_KEY, JSON.stringify(list));
+    } catch (e) { /* storage unavailable */ }
+  }
+
+  function addScoreToLeaderboard(name, points) {
+    const list = loadLeaderboard();
+    list.push({ name: name, score: points });
+    list.sort((a, b) => b.score - a.score);
+    const trimmed = list.slice(0, LB_MAX);
+    saveLeaderboard(trimmed);
+    return trimmed;
+  }
+
+  function isNewBest(points) {
+    const list = loadLeaderboard();
+    if (list.length < LB_MAX) return points > 0 && (list.length === 0 || points > list[0].score);
+    return points > list[list.length - 1].score;
+  }
+
+  function renderLeaderboard(container) {
+    const list = loadLeaderboard();
+    container.innerHTML = "";
+    if (list.length === 0) {
+      container.innerHTML = '<div class="lb-empty">No $ANSEM recorded yet. Be the first bull.</div>';
+      return;
+    }
+    list.forEach((entry, i) => {
+      const row = document.createElement("div");
+      row.className = "lb-row";
+      row.innerHTML =
+        '<span class="lb-rank">#' + (i + 1) + '</span>' +
+        '<span class="lb-name">' + escapeHtml(entry.name) + '</span>' +
+        '<span class="lb-score">' + entry.score + '</span>';
+      container.appendChild(row);
+    });
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  /* =========================================================
+     BACKGROUND ELEMENTS (stars + skyline glow lines)
+  ========================================================= */
+  function initBackground() {
+    bgStars = [];
+    for (let i = 0; i < 45; i++) {
+      bgStars.push({
+        x: Math.random() * CANVAS_W,
+        y: Math.random() * (CANVAS_H - GROUND_H),
+        r: Math.random() * 1.6 + 0.4,
+        tw: Math.random() * Math.PI * 2
+      });
+    }
+    // Skyline / chart-like silhouette bars
+    bgLines = [];
+    let x = 0;
+    while (x < CANVAS_W + 40) {
+      const h = 40 + Math.random() * 120;
+      bgLines.push({ x: x, w: 18 + Math.random() * 22, h: h });
+      x += 22 + Math.random() * 20;
+    }
+  }
+
+  /* =========================================================
+     RESET / INIT GAME
+  ========================================================= */
+  function resetGame() {
+    score = 0;
+    bull.y = CANVAS_H / 2;
+    bull.vy = 0;
+    bull.rotation = 0;
+    bull.wingPhase = 0;
+    bull.legKick = 0;
+    groundOffset = 0;
+    pipes = [];
+
+    // seed initial pipes off-screen to the right
+    let startX = CANVAS_W + 60;
+    for (let i = 0; i < 4; i++) {
+      pipes.push(makePipe(startX + i * PIPE_SPACING));
+    }
+  }
+
+  function makePipe(x) {
+    const margin = 70;
+    const minY = margin + PIPE_GAP / 2;
+    const maxY = CANVAS_H - GROUND_H - margin - PIPE_GAP / 2;
+    const gapY = minY + Math.random() * (maxY - minY);
+    return { x: x, gapY: gapY, passed: false };
+  }
+
+  /* =========================================================
+     INPUT HANDLING
+  ========================================================= */
+  function handleFlap() {
+    if (state === "playing") {
+      bull.vy = FLAP_VELOCITY;
+      bull.legKick = 1; // snap legs into a tucked jump pose on tap
+      sfxFlap();
+    }
+  }
+
+  function onPointerDown(e) {
+    // Ignore taps that originate on overlay UI controls (buttons/inputs)
+    if (e.target.closest && e.target.closest(".overlay")) return;
+    if (state === "playing") {
+      e.preventDefault();
+      handleFlap();
+    }
+  }
+
+  canvas.addEventListener("mousedown", onPointerDown);
+  canvas.addEventListener("touchstart", onPointerDown, { passive: false });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.code === "Space") {
+      e.preventDefault();
+      if (state === "playing") {
+        handleFlap();
+      } else if (state === "start") {
+        startGame();
+      } else if (state === "gameover") {
+        goToStart(); // spacebar on gameover just resets to start-ready; restart btn is primary
+      }
+    }
+  });
+
+  /* =========================================================
+     GAME FLOW
+  ========================================================= */
+  function startGame() {
+    const raw = usernameInput.value.trim();
+    username = raw.length > 0 ? raw.slice(0, 14) : "Anon";
+
+    resetGame();
+    state = "playing";
+
+    startScreen.classList.add("hidden");
+    gameOverScreen.classList.add("hidden");
+    hud.classList.remove("hidden");
+    hudScore.textContent = "0";
+
+    lastTime = performance.now();
+    if (animFrameId) cancelAnimationFrame(animFrameId);
+    animFrameId = requestAnimationFrame(loop);
+  }
+
+  function endGame() {
+    state = "gameover";
+    sfxDeath();
+
+    const best = isNewBest(score);
+    addScoreToLeaderboard(username, score);
+
+    finalScoreEl.textContent = score;
+    deathMsgEl.textContent = DEATH_MESSAGES[Math.floor(Math.random() * DEATH_MESSAGES.length)];
+    newBestMsgEl.classList.toggle("hidden", !best);
+
+    renderLeaderboard(endLbList);
+
+    hud.classList.add("hidden");
+    gameOverScreen.classList.remove("hidden");
+  }
+
+  function goToStart() {
+    state = "start";
+    gameOverScreen.classList.add("hidden");
+    hud.classList.add("hidden");
+    renderLeaderboard(startLbList);
+    startScreen.classList.remove("hidden");
+  }
+
+  playBtn.addEventListener("click", startGame);
+  restartBtn.addEventListener("click", startGame);
+
+  usernameInput.addEventListener("input", function () {
+    const val = usernameInput.value.trim();
+    playBtn.textContent = "Play as " + (val.length > 0 ? val.slice(0, 14) : "Anon");
+  });
+
+  tweetBtn.addEventListener("click", function () {
+    const text = "Just hit " + score + " $ANSEM in Flappy $ANSEM as " + username + " \uD83D\uDC02 $ANSEM";
+    const url = "https://twitter.com/intent/tweet?text=" + encodeURIComponent(text);
+    window.open(url, "_blank");
+  });
+
+  /* =========================================================
+     UPDATE LOGIC
+  ========================================================= */
+  function update(dt) {
+    // --- Bull physics ---
+    bull.vy += GRAVITY * dt;
+    if (bull.vy > MAX_FALL_SPEED) bull.vy = MAX_FALL_SPEED;
+    bull.y += bull.vy * dt;
+
+    // rotation based on velocity: tilt up when rising, down when falling
+    const targetRot = clamp(bull.vy / MAX_FALL_SPEED, -1, 1) * 0.9; // radians-ish scale
+    bull.rotation = lerp(bull.rotation, targetRot, 0.18);
+
+    bull.wingPhase += dt * (bull.vy < 0 ? 18 : 10);
+    bull.legKick = Math.max(0, bull.legKick - dt * 3.2); // relax legs back down after the jump kick
+
+    // --- Ground / ceiling collision ---
+    if (bull.y - BULL_RADIUS < 0) {
+      bull.y = BULL_RADIUS;
+      bull.vy = 0;
+    }
+    if (bull.y + BULL_RADIUS > CANVAS_H - GROUND_H) {
+      bull.y = CANVAS_H - GROUND_H - BULL_RADIUS;
+      endGame();
+      return;
+    }
+
+    // --- Pipes ---
+    for (let i = 0; i < pipes.length; i++) {
+      pipes[i].x -= SCROLL_SPEED * dt;
+    }
+    // recycle pipes that scrolled off-screen
+    if (pipes.length > 0 && pipes[0].x + PIPE_WIDTH < 0) {
+      pipes.shift();
+      const lastX = pipes[pipes.length - 1].x;
+      pipes.push(makePipe(lastX + PIPE_SPACING));
+    }
+
+    // scoring + collision
+    for (let i = 0; i < pipes.length; i++) {
+      const p = pipes[i];
+      // score when bull passes the pipe's right edge
+      if (!p.passed && p.x + PIPE_WIDTH < BULL_X - BULL_RADIUS) {
+        p.passed = true;
+        score++;
+        hudScore.textContent = score;
+        sfxScore();
+      }
+
+      // collision check (rect vs circle simplified as rect vs rect)
+      const bLeft = BULL_X - BULL_RADIUS;
+      const bRight = BULL_X + BULL_RADIUS;
+      const bTop = bull.y - BULL_RADIUS;
+      const bBottom = bull.y + BULL_RADIUS;
+
+      const pLeft = p.x;
+      const pRight = p.x + PIPE_WIDTH;
+
+      if (bRight > pLeft && bLeft < pRight) {
+        const gapTop = p.gapY - PIPE_GAP / 2;
+        const gapBottom = p.gapY + PIPE_GAP / 2;
+        if (bTop < gapTop || bBottom > gapBottom) {
+          endGame();
+          return;
+        }
+      }
+    }
+
+    // --- Ground scroll ---
+    groundOffset -= SCROLL_SPEED * dt;
+    if (groundOffset <= -40) groundOffset += 40;
+  }
+
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  /* =========================================================
+     RENDERING
+  ========================================================= */
+  function render() {
+    // --- Background gradient ---
+    const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+    grad.addColorStop(0, "#0a0a1f");
+    grad.addColorStop(0.55, "#12102a");
+    grad.addColorStop(1, "#1a1030");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+    // --- Stars ---
+    for (let i = 0; i < bgStars.length; i++) {
+      const s = bgStars[i];
+      const twinkle = 0.5 + 0.5 * Math.sin(s.tw + performance.now() * 0.001 * 2);
+      ctx.fillStyle = "rgba(255,255,255," + (0.25 + twinkle * 0.5) + ")";
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // --- Skyline / chart silhouette (glowing gold outline, dark fill) ---
+    ctx.save();
+    for (let i = 0; i < bgLines.length; i++) {
+      const b = bgLines[i];
+      const drawX = ((b.x - (groundOffset * 0.3)) % (CANVAS_W + 60)) - 30;
+      const y = CANVAS_H - GROUND_H - b.h;
+      ctx.fillStyle = "rgba(20,15,35,0.85)";
+      ctx.fillRect(drawX, y, b.w, b.h);
+      ctx.strokeStyle = "rgba(57,255,20,0.12)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(drawX, y, b.w, b.h);
+    }
+    ctx.restore();
+
+    // --- Pipes (Bear Market Pipes) ---
+    for (let i = 0; i < pipes.length; i++) {
+      drawPipe(pipes[i]);
+    }
+
+    // --- Ground ---
+    drawGround();
+
+    // --- Bull ---
+    drawBull();
+  }
+
+  function drawPipe(p) {
+    const gapTop = p.gapY - PIPE_GAP / 2;
+    const gapBottom = p.gapY + PIPE_GAP / 2;
+    const capH = 22;
+
+    // top pipe body
+    const pipeGrad = ctx.createLinearGradient(p.x, 0, p.x + PIPE_WIDTH, 0);
+    pipeGrad.addColorStop(0, "#2a0808");
+    pipeGrad.addColorStop(0.5, "#5c1414");
+    pipeGrad.addColorStop(1, "#2a0808");
+
+    ctx.fillStyle = pipeGrad;
+    ctx.fillRect(p.x, 0, PIPE_WIDTH, gapTop - capH);
+    ctx.fillRect(p.x, gapBottom + capH, PIPE_WIDTH, CANVAS_H - GROUND_H - (gapBottom + capH));
+
+    // caps with gold accent
+    ctx.fillStyle = "#1a0505";
+    ctx.fillRect(p.x - 4, gapTop - capH, PIPE_WIDTH + 8, capH);
+    ctx.fillRect(p.x - 4, gapBottom, PIPE_WIDTH + 8, capH);
+
+    ctx.strokeStyle = "#39ff14";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(p.x - 4, gapTop - capH, PIPE_WIDTH + 8, capH);
+    ctx.strokeRect(p.x - 4, gapBottom, PIPE_WIDTH + 8, capH);
+
+    // subtle gold edge glow on pipe body
+    ctx.strokeStyle = "rgba(57,255,20,0.35)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(p.x, 0, PIPE_WIDTH, gapTop - capH);
+    ctx.strokeRect(p.x, gapBottom + capH, PIPE_WIDTH, CANVAS_H - GROUND_H - (gapBottom + capH));
+  }
+
+  function drawGround() {
+    const groundY = CANVAS_H - GROUND_H;
+    const grad = ctx.createLinearGradient(0, groundY, 0, CANVAS_H);
+    grad.addColorStop(0, "#151018");
+    grad.addColorStop(1, "#050508");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, groundY, CANVAS_W, GROUND_H);
+
+    // gold top edge line
+    ctx.fillStyle = "#39ff14";
+    ctx.fillRect(0, groundY, CANVAS_W, 3);
+
+    // scrolling "chart candle" ticks along the ground (Solana-chart vibe)
+    ctx.fillStyle = "rgba(57,255,20,0.5)";
+    for (let x = groundOffset; x < CANVAS_W; x += 40) {
+      const hgt = 6 + (Math.sin(x * 0.3) + 1) * 6;
+      ctx.fillRect(x, groundY + 14, 3, hgt);
+    }
+  }
+
+  function drawBull() {
+    ctx.save();
+    ctx.translate(BULL_X, bull.y);
+    ctx.rotate(bull.rotation * 0.5);
+
+    // --- tail (thin, behind body) ---
+    ctx.strokeStyle = "#0a0a0a";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(-23, 2);
+    ctx.quadraticCurveTo(-31, 9, -27, 18);
+    ctx.stroke();
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.arc(-27, 18, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // --- 4 animated legs (drawn behind body so hips are hidden, hooves peek out) ---
+    // tuck: 1 = legs pulled up tight against the belly (just tapped/jumping)
+    //       0 = legs extended down in a galloping swing (falling / gliding)
+    const tuck = bull.legKick;
+    const gallop = bull.wingPhase;
+
+    function drawLeg(hipX, hipY, phaseOffset, shade) {
+      const swing = Math.sin(gallop + phaseOffset) * 7 * (1 - tuck);
+      const upperLen = 8 - tuck * 4;   // shortens as it tucks up
+      const lowerLen = 9 - tuck * 6;
+
+      const kneeX = hipX + swing * 0.5;
+      const kneeY = hipY + upperLen;
+      const hoofX = kneeX + swing;
+      const hoofY = kneeY + lowerLen;
+
+      ctx.strokeStyle = shade;
+      ctx.lineWidth = 3.6;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(hipX, hipY);
+      ctx.quadraticCurveTo(hipX + swing * 0.3, hipY + upperLen * 0.6, kneeX, kneeY);
+      ctx.quadraticCurveTo(kneeX + swing * 0.5, kneeY + lowerLen * 0.6, hoofX, hoofY);
+      ctx.stroke();
+
+      // hoof
+      ctx.fillStyle = "#000";
+      ctx.beginPath();
+      ctx.ellipse(hoofX, hoofY, 2.8, 1.9, swing * 0.03, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // far-side legs (slightly darker, drawn first for depth)
+    drawLeg(-13, 11, Math.PI, "#0a0a0a");
+    drawLeg(15, 9, 0.3, "#0a0a0a");
+    // near-side legs (lighter, drawn on top)
+    drawLeg(-16, 12, Math.PI + 0.4, "#1c1c1c");
+    drawLeg(18, 10, 0.7, "#1c1c1c");
+
+    // --- body built from overlapping glossy-black masses (torso, hump, neck, head, muzzle) ---
+    // This reads clearly as a bull: rounded torso -> raised shoulder hump -> neck -> head -> muzzle.
+    function fillGlossy(cx, cy, rx, ry, hlx, hly) {
+      const g = ctx.createRadialGradient(hlx, hly, 1, cx, cy, Math.max(rx, ry) * 1.6);
+      g.addColorStop(0, "#4d4d4d");
+      g.addColorStop(0.35, "#1e1e1e");
+      g.addColorStop(0.75, "#080808");
+      g.addColorStop(1, "#000000");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    fillGlossy(-4, 3, 20, 13, -10, -4);     // main torso
+    fillGlossy(6, -7, 10, 7.5, 2, -11);     // shoulder hump (blends into torso)
+    fillGlossy(14, -3, 7.5, 7, 11, -6);     // neck connector
+    fillGlossy(21, -6, 9, 8, 17, -10);      // head
+    // muzzle (slightly lighter glossy tone, overlapping the front of the head)
+    const muzzleGrad = ctx.createRadialGradient(27, -3, 1, 29, -1, 9);
+    muzzleGrad.addColorStop(0, "#3d3d3d");
+    muzzleGrad.addColorStop(1, "#0a0a0a");
+    ctx.fillStyle = muzzleGrad;
+    ctx.beginPath();
+    ctx.ellipse(29, -1, 6, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // neon rim light along the top of the hump/back (pink + green like the reference glow)
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.strokeStyle = "rgba(255,60,220,0.3)";
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.ellipse(-4, 3, 20, 13, 0, Math.PI * 1.15, Math.PI * 1.75);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(57,255,20,0.28)";
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.ellipse(6, -7, 10, 7.5, 0, Math.PI * 1.2, Math.PI * 1.8);
+    ctx.stroke();
+    ctx.restore();
+
+    // --- nostrils on the muzzle ---
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.arc(32, -2, 0.9, 0, Math.PI * 2);
+    ctx.arc(32, 1.4, 0.9, 0, Math.PI * 2);
+    ctx.fill();
+
+    // --- ear (dark, tucked just behind the horns, tiny green rim) ---
+    ctx.fillStyle = "#141414";
+    ctx.beginPath();
+    ctx.ellipse(14, -14, 4, 2.3, -0.7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(57,255,20,0.3)";
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    // --- big curved glossy green horns (hooked, glowing, matches reference) ---
+    ctx.save();
+    ctx.shadowColor = "#39ff14";
+    ctx.shadowBlur = 11;
+
+    // back horn (curls up and back-left, over the poll)
+    const hornGrad1 = ctx.createLinearGradient(18, -11, 5, -21);
+    hornGrad1.addColorStop(0, "#0d5c08");
+    hornGrad1.addColorStop(0.5, "#39ff14");
+    hornGrad1.addColorStop(1, "#9dff8a");
+    ctx.fillStyle = hornGrad1;
+    ctx.beginPath();
+    ctx.moveTo(18, -11);
+    ctx.quadraticCurveTo(14, -15, 11, -20);
+    ctx.quadraticCurveTo(8, -23, 5, -21);
+    ctx.quadraticCurveTo(9, -19, 11, -16);
+    ctx.quadraticCurveTo(14, -13, 16, -9);
+    ctx.closePath();
+    ctx.fill();
+
+    // front horn (curls up and forward, matches reference)
+    const hornGrad2 = ctx.createLinearGradient(25, -12, 40, -24);
+    hornGrad2.addColorStop(0, "#0d5c08");
+    hornGrad2.addColorStop(0.5, "#39ff14");
+    hornGrad2.addColorStop(1, "#9dff8a");
+    ctx.fillStyle = hornGrad2;
+    ctx.beginPath();
+    ctx.moveTo(25, -12);
+    ctx.quadraticCurveTo(29, -17, 33, -23);
+    ctx.quadraticCurveTo(36, -27, 40, -24);
+    ctx.quadraticCurveTo(35, -19, 31, -15);
+    ctx.quadraticCurveTo(28, -11, 25, -8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // horn tip glow highlights
+    ctx.fillStyle = "#d8ffce";
+    ctx.beginPath();
+    ctx.arc(5, -21, 1.5, 0, Math.PI * 2);
+    ctx.arc(40, -24, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // --- eye (glowing red, matches $ANSEM banner) ---
+    ctx.save();
+    ctx.shadowColor = "#ff2020";
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = "#ff3030";
+    ctx.beginPath();
+    ctx.arc(25, -8, 2.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ffc0c0";
+    ctx.beginPath();
+    ctx.arc(25.9, -8.8, 1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  /* =========================================================
+     MAIN LOOP
+  ========================================================= */
+  function loop(now) {
+    const dt = Math.min((now - lastTime) / 1000, 0.033); // clamp dt to avoid big jumps
+    lastTime = now;
+
+    if (state === "playing") {
+      update(dt);
+    }
+    render();
+
+    if (state === "playing") {
+      animFrameId = requestAnimationFrame(loop);
+    }
+  }
+
+  /* =========================================================
+     INITIAL BOOT
+  ========================================================= */
+  function boot() {
+    initBackground();
+    resetGame();
+    renderLeaderboard(startLbList);
+    render(); // draw an initial static frame behind the start overlay
+    playBtn.textContent = "Play as Anon";
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
