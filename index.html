@@ -268,6 +268,7 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function () {
   "use strict";
@@ -289,7 +290,9 @@
   const BULL_X = 100;            // fixed horizontal position of the bull
   const BULL_RADIUS = 18;        // collision radius (approx)
 
-  const LB_KEY = "flappyAnsemLeaderboard";
+  const SUPABASE_URL = "https://gogvlrvxwkyhjpvwuhrkl.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_t3TMk975V0cHuGw3AZTqPg_Dr2j2VIz";
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const LB_MAX = 10;
 
   const DEATH_MESSAGES = [
@@ -381,43 +384,41 @@
   function sfxDeath() { beep(140, 0.35, "sawtooth", 0.08); }
 
   /* =========================================================
-     LEADERBOARD (localStorage)
+     LEADERBOARD (Supabase)
   ========================================================= */
-  function loadLeaderboard() {
-    try {
-      const raw = localStorage.getItem(LB_KEY);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return [];
-      return parsed;
-    } catch (e) {
+  async function fetchLeaderboard() {
+    const { data, error } = await supabaseClient
+      .from("leaderboard")
+      .select("username, score, created_at")
+      .order("score", { ascending: false })
+      .order("created_at", { ascending: true })
+      .limit(LB_MAX);
+
+    if (error) {
+      console.error("Leaderboard fetch failed:", error);
       return [];
     }
+
+    return data || [];
   }
 
-  function saveLeaderboard(list) {
-    try {
-      localStorage.setItem(LB_KEY, JSON.stringify(list));
-    } catch (e) { /* storage unavailable */ }
+  async function submitScore(name, points) {
+    const cleanName = (name || "").trim().slice(0, 14) || "Anon";
+
+    const { error } = await supabaseClient
+      .from("leaderboard")
+      .insert([{ username: cleanName, score: points }]);
+
+    if (error) {
+      console.error("Score submit failed:", error);
+      return false;
+    }
+
+    return true;
   }
 
-  function addScoreToLeaderboard(name, points) {
-    const list = loadLeaderboard();
-    list.push({ name: name, score: points });
-    list.sort((a, b) => b.score - a.score);
-    const trimmed = list.slice(0, LB_MAX);
-    saveLeaderboard(trimmed);
-    return trimmed;
-  }
-
-  function isNewBest(points) {
-    const list = loadLeaderboard();
-    if (list.length < LB_MAX) return points > 0 && (list.length === 0 || points > list[0].score);
-    return points > list[list.length - 1].score;
-  }
-
-  function renderLeaderboard(container) {
-    const list = loadLeaderboard();
+  async function renderLeaderboard(container) {
+    const list = await fetchLeaderboard();
     container.innerHTML = "";
     if (list.length === 0) {
       container.innerHTML = '<div class="lb-empty">No $ANSEM recorded yet. Be the first bull.</div>';
@@ -428,7 +429,7 @@
       row.className = "lb-row";
       row.innerHTML =
         '<span class="lb-rank">#' + (i + 1) + '</span>' +
-        '<span class="lb-name">' + escapeHtml(entry.name) + '</span>' +
+        '<span class="lb-name">' + escapeHtml(entry.username || "Anon") + '</span>' +
         '<span class="lb-score">' + entry.score + '</span>';
       container.appendChild(row);
     });
@@ -547,28 +548,27 @@
     animFrameId = requestAnimationFrame(loop);
   }
 
-  function endGame() {
+  async function endGame() {
     state = "gameover";
     sfxDeath();
 
-    const best = isNewBest(score);
-    addScoreToLeaderboard(username, score);
+    await submitScore(username, score);
 
     finalScoreEl.textContent = score;
     deathMsgEl.textContent = DEATH_MESSAGES[Math.floor(Math.random() * DEATH_MESSAGES.length)];
-    newBestMsgEl.classList.toggle("hidden", !best);
+    newBestMsgEl.classList.add("hidden");
 
-    renderLeaderboard(endLbList);
+    await renderLeaderboard(endLbList);
 
     hud.classList.add("hidden");
     gameOverScreen.classList.remove("hidden");
   }
 
-  function goToStart() {
+  async function goToStart() {
     state = "start";
     gameOverScreen.classList.add("hidden");
     hud.classList.add("hidden");
-    renderLeaderboard(startLbList);
+    await renderLeaderboard(startLbList);
     startScreen.classList.remove("hidden");
   }
 
@@ -956,10 +956,10 @@
   /* =========================================================
      INITIAL BOOT
   ========================================================= */
-  function boot() {
+  async function boot() {
     initBackground();
     resetGame();
-    renderLeaderboard(startLbList);
+    await renderLeaderboard(startLbList);
     render(); // draw an initial static frame behind the start overlay
     playBtn.textContent = "Play as Anon";
   }
